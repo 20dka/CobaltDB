@@ -3,12 +3,13 @@
 
 cobaltVersion = "1.5.3A"
 
-pluginPath = debug.getinfo(1).source
-pluginPath = pluginPath:sub(2,(pluginPath:find("CobaltEssentialsLoader.lua"))-1):gsub("\\","/")
-print(pluginPath)
+pluginPath = debug.getinfo(1).source:gsub("\\","/")
+pluginPath = pluginPath:sub(2,(pluginPath:find("CobaltDBLoader.lua"))-1)
+print("Plugin path is: " .. pluginPath)
 
 package.path = package.path .. ";;" .. pluginPath .. "/?.lua;;".. pluginPath .. "/lua/?.lua"
 package.cpath = package.cpath .. ";;" .. pluginPath .. "/?.dll;;" .. pluginPath .. "/lib/?.dll"
+package.cpath = package.cpath .. ";;" .. pluginPath .. "/?.so;;" .. pluginPath .. "/lib/?.so"
 
 
 utils = require("CobaltUtils")

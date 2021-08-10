@@ -24,15 +24,18 @@ function CElog(string, heading, funcname, host)
 	elseif heading == "RCON" then
 		out = out .. " [" .. color(33) .. "RCON" .. color(0) .. "] " .. color(0) .. string
 	elseif heading == "CobaltDB" then
+
+		out = out .. " [" .. color(35) .. "CobaltDB" .. color(0) .. "] "
+
 		if funcname then
-			out = out .. " [" .. color(35) .. "CobaltDB" .. color(0) .. "] "
 			if host then out = out .. "[" .. color(32) .. host .. color(0) .. "] " end
 			out = out .. "["
 			if funcColor[funcname] then out = out .. color(funcColor[funcname]) end
 			out = out .. funcname .. color(0) .. "] " .. string
 		else
-			out = out .. " [" .. color(35) .. "CobaltDB" .. color(0) .. "] " .. color(0) .. string
+			out = out .. color(0) .. string
 		end
+
 	elseif heading == "CHAT" then
 		out = out .. " [" .. color(32) .. "CHAT" .. color(0) .. "] " .. color(0) .. string
 	elseif heading == "DEBUG" and (config == nil or config.enableDebug.value == true) then

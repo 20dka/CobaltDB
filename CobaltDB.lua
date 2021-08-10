@@ -62,7 +62,7 @@ local function openDatabase(d)
 			CElog("local db exists")
 		else
 			d.targetid = "shared"
-			CElog("local db doesn't exist, using shared")
+			CElog("local db doesn't exist, using 'shared'")
 		end
 	end
 
@@ -183,8 +183,8 @@ end
 --returns a specific value from the table
 local function query(d)
 	if not d.targetid then
-		CElog("no targetid was specified! defaulting to local", "CobaltDB", d.event)
-		d.targetid = d.id
+		CElog("no targetid was specified! defaulting to 'shared'", "CobaltDB", d.event)
+		d.targetid = "shared"
 	end
 
 	local data
@@ -308,7 +308,7 @@ local actionTable = {
 
 local function concatAll(tbl)
 	local str = ''
-	for k,v in ipairs(tbl) do str = str .. '.' .. v end
+	for k,v in pairs(tbl) do str = str .. '.' .. v end
 	return str:sub(2)
 end
 
@@ -317,9 +317,13 @@ function checkforincoming()
 	while data do
 		local parsed = json.parse(data)
 		parsed.ip = ip; parsed.port = port -- add return address
-		CElog(concatAll({parsed.targetid or parsed.id, parsed.dbname, parsed.table, parsed.key, parsed.value}), 'CobaltDB', parsed.event, ip..':'..port)
+		
+		local targetstr = concatAll({parsed.targetid or parsed.id, parsed.dbname, parsed.table, parsed.key, parsed.value})
+
+		CElog(targetstr, 'CobaltDB', parsed.event, ip..':'..port)
 
 		actionTable[parsed.event](parsed) -- process request and reply
+
 		data, ip, port = connector:receivefrom() -- check for new requests
 	end
 end
