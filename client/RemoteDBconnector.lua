@@ -26,7 +26,7 @@ socket = require("socket")
 local server = socket.udp()
 server:settimeout(3)
 
-local function init(configPort)
+local function init(configPort, hostname)
 	if utils then
 
 		local configPath = pluginPath .. "/dbConfig.json"
@@ -58,7 +58,7 @@ local function init(configPort)
 	end
 
 	print("setting peer to port ", port)
-	server:setpeername('localhost', tonumber(port))
+	server:setpeername(hostname or 'localhost', tonumber(port))
 
 
 	server:send(json.stringify({event='ping', id=serverID}))
