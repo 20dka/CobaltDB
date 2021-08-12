@@ -1,33 +1,89 @@
 --Copyright (C) 2020, Preston Elam (CobaltTetra) ALL RIGHTS RESERVED
 --COBALTESSENTIALS IS PROTECTED UNDER AN GPLv3 LICENSE
 
---    PRE: Precondition
---   POST: Postcondition
---RETURNS: What the method returns
 
---TODO: CHANGE THE FORMAT TO DATABASES > TABLES > KEYS > VALUES
 
 local M = {}
 
 local loadedDatabases = {}
-
 local cobaltSysChar = string.char(0x99, 0x99, 0x99, 0x99)
-
 local CobaltDBport = 10814
+
+
+-- loading
+pluginPath = debug.getinfo(1).source:gsub("\\","/")
+pluginPath = pluginPath:sub(2,(pluginPath:find("CobaltDB.lua"))-2)
+print("Plugin path is: " .. pluginPath)
+
+package.path = package.path .. ";;" .. pluginPath .. "/?.lua;;".. pluginPath .. "/lua/?.lua"
+package.cpath = package.cpath .. ";;" .. pluginPath .. "/?.dll;;" .. pluginPath .. "/lib/?.dll"
+package.cpath = package.cpath .. ";;" .. pluginPath .. "/?.so;;" .. pluginPath .. "/lib/?.so"
+
+
+utils = require("CobaltUtils")
+print("\n\n")
+CElog(color(107,94) .. "-------------Loading CobaltDB-------------")
+
+json = require("json")
+CElog("json Lib Loaded")
+
+dbroot = pluginPath .. "CobaltDB/"
+print("DB root is: " .. dbroot)
+
+CElog("-------------CobaltDB Loaded-------------")
+-- loading
+
+
+
+
 
 RegisterEvent("initDB","initDB")
 
-----------------------------------------------------------EVENTS-----------------------------------------------------------
+
+
+
+
+-- uptime
+local age = 0 --age of the server in milliseconds
+local lastAnnounce = 0
+local announceStep = 300000
+
+CreateThread("onTick", 250)
+
+CElog("CobaltDB Initiated")
+
+
+function onTick()
+	age = os.clock() * 1000
+	if age > lastAnnounce + announceStep then
+		local output = "DB Uptime: " .. (lastAnnounce + announceStep)/60000 .. " Minutes"
+
+		CElog(output)
+
+		lastAnnounce = lastAnnounce + announceStep
+	end
+end
+-- uptime
+
+
+
+
+
+
+
+
+
+
+
+
+
 --give the CobaltDBconnector all the information it needs without having to re-calculate it all
-function initDB(path, cpath, dbroot)
+--function initDB(path, cpath, dbroot)
 
-	package.cpath = cpath
-	package.path = path
-
-	json = require("json")
+	--json = require("json")
 	socket = require("socket")
-	utils = require("CobaltUtils")
-	_G.dbroot = dbroot
+	--utils = require("CobaltUtils")
+	--_G.dbroot = dbroot
 
 	local configPath = dbroot .. "dbConfig.json"
 
@@ -49,7 +105,7 @@ function initDB(path, cpath, dbroot)
 
 	CElog("CobaltDB Ready on port "..tostring(CobaltDBport),"CobaltDB")
 	CreateThread("checkforincoming", 100)
-end
+--end
 ----------------------------------------------------------MUTATORS---------------------------------------------------------
 
 local function openDatabase(d)
