@@ -16,9 +16,12 @@ pluginPath = pluginPath:sub(2,(pluginPath:find("CobaltDB.lua"))-2)
 print("Plugin path is: " .. pluginPath)
 
 package.path = package.path .. ";;" .. pluginPath .. "/?.lua;;".. pluginPath .. "/lua/?.lua"
-package.cpath = package.cpath .. ";;" .. pluginPath .. "/?.dll;;" .. pluginPath .. "/lib/?.dll"
-package.cpath = package.cpath .. ";;" .. pluginPath .. "/?.so;;" .. pluginPath .. "/lib/?.so"
 
+if package.config:sub(1,1) == '\\' then
+	package.cpath = package.cpath .. ";;" .. pluginPath .. "/?.dll;;" .. pluginPath .. "/lib/?.dll"
+else
+	package.cpath = package.cpath .. ";;" .. pluginPath .. "/?.so;;" .. pluginPath .. "/lib/?.so"
+end
 
 utils = require("CobaltUtils")
 print("\n\n")
