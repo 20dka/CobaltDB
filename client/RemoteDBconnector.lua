@@ -30,10 +30,10 @@ local function init(configPort, hostname)
 	if utils then
 
 		local configPath = pluginPath .. "/dbConfig.json"
-	
+
 		if utils.exists(configPath) then
 			local configcontents = utils.readJson(configPath)
-	
+
 			if not configcontents.ServerID then
 				CElog("No DB serverID specified in the config, defaulting to '"..serverID.."'","WARN")
 			else
@@ -46,7 +46,7 @@ local function init(configPort, hostname)
 				port = configcontents.remoteDBport
 				CElog("Remote CobaltDB Connector port set to "..port, 'CobaltDB')
 			end
-	
+
 			if configcontents.forceTarget ~= nil then
 				forceTarget = configcontents.forceTarget
 				CElog("Remote CobaltDB Connector 'forceTarget' set to "..tostring(forceTarget), 'CobaltDB')
@@ -153,41 +153,34 @@ tableTemplate.metatable =
 --------------------------------------------------------CONSTRUCTOR--------------------------------------------------------
 
 
-local function newDatabase(DBname, targetID)
-	--TriggerLocalEvent("openDatabase", DBname)
+local function newDatabase(dbName, targetID)
 	if targetID == "local" then targetID = serverID end
 	targetID = forceTarget and (targetID or serverID) or nil --default to local DBs
-	server:send(json.stringify({event = "openDatabase", id=serverID, dbname = DBname, targetid=targetID}))
+	server:send(json.stringify({event = "openDatabase", id=serverID, dbname = dbName, targetid=targetID}))
 
-	local databaseLoaderResponse = server:receive()
-	if databaseLoaderResponse ~= nil then
-		if databaseLoaderResponse:sub(1,2) == "E:" then
-			CElog(DBname .. " could not be opened after 5 tries due to: " .. databaseLoaderResponse:sub(3),"CobaltDB")
-			return nil, "CobaltDB failed to load " .. DBname .. "after 5 tries due to : " .. databaseLoaderResponse:sub(3)
+	local dbResponseString = server:receive()
+	if dbResponseString ~= nil then
+		local parsedResposnse = json.parse(dbResponseString)
+
+		if not parsedResposnse or not parsedResposnse.targetID then
+			CElog(dbName .. " could not be opened, Remote DB returned an invalid response: " .. dbResponseString, "WARN")
+			return nil, "Invalid response from CobaltDB"
 		else
-			local parsedResposnse = json.parse(databaseLoaderResponse)
+			CElog(DBname .. " sucessfully opened, target is: " .. parsedResposnse.targetID, "CobaltDB")
 
-			if not parsedResposnse or not parsedResposnse.targetID then
-				CElog("%s could not be opened, Remote DB returned an invalid response: %s", DBname, databaseLoaderResponse, "WARN")
-				return nil, "Invalid response from CobaltDB"
-			else
+			local dbHandle =
+			{
+				CobaltDB_databaseName = dbName,
+				CobaltDB_newTable = M.newTable,
+				CobaltDB_targetID = parsedResposnse.targetID,
+				close = function(table)
+					TriggerLocalEvent("closeDatabase",dbName)
+				end
 
-				CElog(DBname .. " sucessfully opened, target is: " .. parsedResposnse.targetID,"CobaltDB")
+			}
+			setmetatable(dbHandle, databaseTemplate.metatable)
 
-				newDatabase =
-				{
-					CobaltDB_databaseName = DBname,
-					CobaltDB_newTable = M.newTable,
-					CobaltDB_targetID = parsedResposnse.targetID,
-					close = function(table)
-						TriggerLocalEvent("closeDatabase",DBname)
-					end
-
-				}
-				setmetatable(newDatabase, databaseTemplate.metatable)
-
-				return newDatabase, parsedResposnse.isNew and "new" or "loaded"
-			end
+			return dbHandle, parsedResposnse.isNew and "new" or "existing"
 		end
 	else
 		print("No response from CobaltDB")
@@ -217,12 +210,6 @@ end
 
 ----------------------------------------------------------MUTATORS---------------------------------------------------------
 
---used to make sure the socket is connected
-local function reconnectSocket()
-	server:setsockname('0.0.0.0', tonumber(port))
-end
-
-
 --changes the a value in the table in
 local function set(DBname, tableName, key, value, targetID)
 	targetID = targetID or serverID --default to local DBs
@@ -232,7 +219,6 @@ local function set(DBname, tableName, key, value, targetID)
 		value = json.stringify(value)
 	end
 
-	--TriggerLocalEvent("set", DBname, tableName, key, value)
 	server:send(json.stringify({event = "set", id=serverID, dbname = DBname, table = tableName, key = key, value = value, targetid=targetID}))
 end
 
@@ -247,13 +233,10 @@ end
 --returns a specific value from the table
 local function query(DBname, tableName, key, targetID)
 	targetID = targetID or serverID --default to local DBs
-	--reconnectSocket()
 
-	--TriggerLocalEvent("query", DBname, tableName, key)
 	server:send(json.stringify({event = "query", id=serverID, dbname = DBname, table = tableName, key = key, targetid=targetID}))
 
-	local data = server:receive()
-	local error
+	local data, error = server:receive()
 
 	if type(data) == "string" then
 		if data:sub(1,4) == cobaltSysChar then
@@ -269,20 +252,16 @@ local function query(DBname, tableName, key, targetID)
 		end
 	end
 
-	--server:close()
 	return data, error
 end
 
 --returns a read-only version of the table, or sub-table as json.
 local function getTable(DBname, tableName, targetID)
 	targetID = targetID or serverID --default to local DBs
-	--reconnectSocket()
 
-	--TriggerLocalEvent("getTable", DBname, tableName)
 	server:send(json.stringify({event = "getTable", id=serverID, dbname = DBname, table = tableName, targetid=targetID}))
 
-	local data = server:receive()
-	local error
+	local data, error = server:receive()
 
 	if data:sub(1,4) == cobaltSysChar then
 		error = data:sub(5)
@@ -291,20 +270,16 @@ local function getTable(DBname, tableName, targetID)
 		data = json.parse(data)
 	end
 
-	--server:close()
 	return data, error
 end
 
 --returns a read-only list of all tables within the database
 local function getTables(DBname, targetID)
 	targetID = targetID or serverID --default to local DBs
-	--reconnectSocket()
 
-	--TriggerLocalEvent("getTables", DBname)
 	server:send(json.stringify({event = "getTables", id=serverID, dbname = DBname, targetid=targetID}))
 
-	local data = server:receive()
-	local error
+	local data, error = server:receive()
 
 	if data:sub(1,4) == cobaltSysChar then
 		error = data:sub(5)
@@ -313,20 +288,16 @@ local function getTables(DBname, targetID)
 		data = json.parse(data)
 	end
 
-	--server:close()
 	return data, error
 end
 
 local function getKeys(DBname, tableName, targetID)
 	targetID = targetID or serverID --default to local DBs
-	--reconnectSocket()
 
-	--TriggerLocalEvent("getKeys", DBname, tableName)
 	server:send(json.stringify({event = "getKeys", id=serverID, dbname = DBname, table = tableName, targetid=targetID}))
 
 
-	local data = server:receive()
-	local error
+	local data, error = server:receive()
 
 	if data:sub(1,4) == cobaltSysChar then
 		error = data:sub(5)
@@ -335,70 +306,41 @@ local function getKeys(DBname, tableName, targetID)
 		data = json.parse(data)
 	end
 
-	--server:close()
 	return data, error
 end
 
 local function tableExists(DBname, tableName, targetID)
 	targetID = targetID or serverID --default to local DBs
-	--reconnectSocket()
 
-	--TriggerLocalEvent("tableExists", DBname, tableName)
 	server:send(json.stringify({event = "tableExists", id=serverID, dbname = DBname, table = tableName, targetid=targetID}))
 
 
 	exists = server:receive() == tableName
 
-	--server:close()
 	return exists
 end
 
 
----------------------------------------------------------FUNCTIONS---------------------------------------------------------
-local function openDatabase(DBname, targetID)
-
-	print("calling newDatabase")
-
-	return newDatabase(DBname, targetID)
-
-	--[[
-
-	--reconnectSocket()
-
-	TriggerLocalEvent("openDatabase", DBname)
-	if server:receive() == DBname then
-		CElog(DBname .. " sucessfully opened.","CobaltDB")
-
-		--server:close()
-		return true
-	else
-
-		--server:close()
-		return false
-	end]]
-end
-
-
-------------------------------------------------------PUBLICINTERFACE------------------------------------------------------
+------------------------------------------------------PUBLIC INTERFACE------------------------------------------------------
 
 
 -----CONSTRUCTOR-----
 M.init = init
-M.setPort = setPort
 M.new = newDatabase
 M.newTable = newTable
 
-----EVENTS-----
-
 ----MUTATORS-----
 M.set = set
+
 ----ACCESSORS----
 M.query = query
 M.getTable = getTable
 M.getTables = getTables
 M.getKeys = getKeys
 M.tableExists = tableExists
+
 ----FUNCTIONS----
-M.openDatabase = openDatabase
+M.openDatabase = newDatabase
+M.setPort = function(...) end
 
 return M
