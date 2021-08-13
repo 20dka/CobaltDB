@@ -30,7 +30,7 @@ CElog(color(107,94) .. "-------------Loading CobaltDB-------------")
 json = require("json")
 CElog("json Lib Loaded")
 
-dbroot = pluginPath .. "CobaltDB/"
+dbroot = pluginPath .. "/root/"
 print("DB root is: " .. dbroot)
 
 CElog("-------------CobaltDB Loaded-------------")
@@ -40,7 +40,7 @@ CElog("-------------CobaltDB Loaded-------------")
 
 
 
-RegisterEvent("initDB","initDB")
+--RegisterEvent("initDB","initDB")
 
 
 
