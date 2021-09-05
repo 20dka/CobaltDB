@@ -1,11 +1,14 @@
 # CobaltDB
 Pure lua database supporting multiple clients based on json & luasocket
 
-code is based on [prestonelam2003/CobaltEssentials](https://github.com/prestonelam2003/CobaltEssentials/)
+The code is based on [prestonelam2003/CobaltEssentials](https://github.com/prestonelam2003/CobaltEssentials/)
+
+#### Notice:
+**CobaltDB does not currently work as a systemd service on Linux, I recommend using `nohup` or `screen`**
 
 ## Setup:
 
-This is a BeamMP server plugin, and as such it runs inside a BeamMP server. Extract the contents of this folder into `Resources/Server/CobaltDB`. Players shouldn't join this server, so I recommend setting the `MaxPlayers` value to `0`, and using a placeholder text for the `AuthKey`. **Don't forget to change the server's port!*
+This is a BeamMP server plugin, and as such it runs inside a BeamMP server. Extract the contents of this folder into `Resources/Server/CobaltDB`. Players shouldn't join this server, so I recommend setting the `MaxPlayers` value to `0`, and using a placeholder text for the `AuthKey`. **Don't forget to change the server's port!**
 
 ### To use this with CobaltEssentials:
 Put the `client/RemoteDBconnector.lua` file in `CobaltEssentials/lua/`.
