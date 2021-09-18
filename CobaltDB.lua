@@ -11,17 +11,8 @@ local CobaltDBport = 10814
 
 
 -- loading
-pluginPath = debug.getinfo(1).source:gsub("\\","/")
-pluginPath = pluginPath:sub(2,(pluginPath:find("CobaltDB.lua"))-2)
+pluginPath = "Resources/Server/CobaltDB"
 print("Plugin path is: " .. pluginPath)
-
-package.path = package.path .. ";;" .. pluginPath .. "/?.lua;;".. pluginPath .. "/lua/?.lua"
-
-if package.config:sub(1,1) == '\\' then
-	package.cpath = package.cpath .. ";;" .. pluginPath .. "/?.dll;;" .. pluginPath .. "/lib/?.dll"
-else
-	package.cpath = package.cpath .. ";;" .. pluginPath .. "/?.so;;" .. pluginPath .. "/lib/?.so"
-end
 
 utils = require("CobaltUtils")
 print("\n\n")
@@ -51,22 +42,12 @@ local age = 0 --age of the server in milliseconds
 local lastAnnounce = 0
 local announceStep = 300000
 
-CreateThread("onTick", 250)
+--CreateThread("onTick", 250)
 
 CElog("CobaltDB Initiated")
 
 
-function onTick()
-	age = os.clock() * 1000
-	if age > lastAnnounce + announceStep then
-		local output = "DB Uptime: " .. (lastAnnounce + announceStep)/60000 .. " Minutes"
-
-		CElog(output)
-
-		lastAnnounce = lastAnnounce + announceStep
-	end
-end
--- uptime
+--uptime
 
 
 
@@ -81,7 +62,7 @@ end
 
 
 --give the CobaltDBconnector all the information it needs without having to re-calculate it all
---function initDB(path, cpath, dbroot)
+function onInit()
 
 	--json = require("json")
 	socket = require("socket")
@@ -107,8 +88,14 @@ end
 	connector:settimeout(1)
 
 	CElog("CobaltDB Ready on port "..tostring(CobaltDBport),"CobaltDB")
-	CreateThread("checkforincoming", 100)
---end
+
+	while true do
+		checkforincoming()
+	end
+
+
+	--CreateThread("checkforincoming", 100)
+end
 ----------------------------------------------------------MUTATORS---------------------------------------------------------
 
 local function openDatabase(d)
