@@ -46,7 +46,7 @@ function CElog(string, heading, funcname, host)
 
 
 	out = out .. color(0)
-	print(out)
+	MP.PrintRaw(out)
 	return out
 end
 
@@ -100,141 +100,6 @@ function output(ID, message)
 	end
 end
 
--- https://stackoverflow.com/a/40195356/7137271
-local function exists(file)
-	local ok, err, code = os.rename(file, file)
-	if not ok then
-		if code == 13 then
-			-- Permission denied, but it exists
-			return true
-		end
-	end
-	return ok, err
-end
-
-local function isDir(path)
-	-- "/" works on both Unix and Windows
-	--print(debug.getinfo(2).name)
-	--print(path)
-	return exists(path.."/")
-end
-
-local function createDirectory(path)
-	if os.getenv('HOME') then
-		os.execute("mkdir " .. path:gsub("\\","/"))
-	else
-		os.execute("mkdir " .. path:gsub("/","\\"))
-	end
-end
-
-local function createDirectoryRec(path)
-	if isDir(path) then return end
-	path = path:sub(1,#path-1)
-	local parent = string.match(path, "(.*[\\/])")
-	if not isDir(parent) then createDirectoryRec(parent) end
-
-	createDirectory(path)
-end
-
-local function copyFile(src, dst)
-	if os.getenv('HOME') then
-		os.execute(string.format("cp %s %s",src:gsub('\\', '/'), dst:gsub('\\','/')))
-	else
-		os.execute(string.format("copy %s %s",src:gsub('/', '\\'), dst:gsub('/','\\')))
-	end
-end
-
-local function getPathSplit(path)
-	local dir = string.match(path, "(.*[\\/])")
-	path = path:sub(#(dir and dir..' ' or ''))
-	local name, ext = string.match(path, "(.+)(%.%w+)$")
-	return dir or '', name, ext
-end
-
-local function readJson(path)
-	local jsonFile, error = io.open(path,"r")
-	if error then return nil, error end
-
-	local jsonText = jsonFile:read("*a")
-	jsonFile:close()
-	local success, data = pcall(json.parse, jsonText)
-	
-	if not success then
-		print("error while parsing file", path, data)
-		return nil, true
-	end
-
-	return data, false
-end
-
-local function writeJson(path, data)
-	local dir, fname, ext = getPathSplit(path)
-
-	if not isDir(dir) then createDirectoryRec(dir) end
-
-	local jsonFile, error = io.open(path,"w")
-	if error then return false end
-
-	jsonFile:write(json.stringify(data or {}))
-	jsonFile:close()
-
-	return true
-end
-
---read a .cfg file and return a table containing it's files
-local function readCfg(path)
-	print("readcfg")
-	local cfg = {}
-	
-	local n = 1
-
-	local file = io.open(path,"r")
-
-	local line = file:read("*l") --get first value for line
-	while line ~= nil do
-
-		--remove comments
-		local c = line:find("#")
-
-		if c ~= nil then
-			line = line:sub(1,c-1)
-		end
-
-		--see if this line even contians a value
-		local equalSignIndex = line:find("=")
-		if equalSignIndex ~= nil then
-			
-			local k = line:sub(1, equalSignIndex - 1)
-			k = k:gsub(" ", "") --remove spaces in the key, they aren't required and will serve to make thigns more confusing.
-
-			local v = line:sub(equalSignIndex + 1)
-
-			v = load("return " ..  v)()
-			
-			cfg[k] = v
-		end
-
-
-		--get next line ready
-		line = file:read("*line")
-	end
-
-	if cfg.Name then
-		cfg.rawName = cfg.Name
-		local s,e = cfg.Name:find("%^")
-		while s ~= nil do
-
-			if s ~= nil then
-				cfg.Name = cfg.Name:sub(0,s-1) .. cfg.Name:sub(s+2)
-			end
-		
-			s,e = cfg.Name:find("%^")
-		end
-	end
-
-	return cfg
-end
-
 -- PRE: number, time in seconds is passed in, followed by boolean hours, boolean minutes, boolean seconds, boolean milliseconds.
 --POST: the formatted time is output as a string.
 function formatTime(time)
@@ -258,14 +123,58 @@ function formatTime(time)
 	return  time ..":".. seconds .. ":" .. milliseconds
 end
 
-M.copyFile = copyFile
-M.exists = exists
-M.isDir = isDir
-M.getPathSplit = getPathSplit
-M.createDirectory = createDirectory
+
+
+
+
+
+-- FS related functions
+local function readJson(path)
+	if not FS.Exists(path) then
+		return nil, "File does not exist"
+	end
+
+	local jsonFile, error = io.open(path,"r")
+	if not jsonFile or error then
+		return nil, error
+	end
+
+	local jsonText = jsonFile:read("*a")
+	jsonFile:close()
+	local success, data = pcall(json.parse, jsonText)
+
+	if not success then
+		print("Error while parsing file", path, data)
+		return nil, "Error while parsing JSON"
+	end
+
+	return data, nil
+end
+
+local function writeJson(path, data)
+	local success, error = FS.CreateDirectory(FS.GetParentFolder(path))
+
+	if not success then
+		CElog('failed to create directory for file "' .. tostring(path) .. '", error: ' .. tostring(error),"WARN")
+		return false, error
+	end
+
+	local jsonFile, error = io.open(path,"w")
+	if not jsonFile or error then
+		return nil, error
+	end
+
+	jsonFile:write(json.stringify(data or {}))
+	jsonFile:close()
+
+	return true, nil
+end
+-- FS related functions
+
+
 
 M.readJson = readJson
 M.writeJson = writeJson
-M.readCfg = readCfg
+
 
 return M

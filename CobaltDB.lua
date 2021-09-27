@@ -70,15 +70,15 @@ function onInit()
 
 	local configPath = dbroot .. "dbConfig.json"
 
-	if utils.exists(configPath) then
-		local configcontents = utils.readJson(configPath)
+	local configcontents, error = utils.readJson(configPath)
+	if not error and configcontents ~= nil then
 		if not configcontents.CobaltDBport then
 			CElog("No CobaltDB port specified in the config, defaulting to '"..CobaltDBport.."'","WARN")
 		else
 			CobaltDBport = configcontents.CobaltDBport
 		end
 	else
-		CElog("no config found, using default values","WARN")
+		CElog("config could not be read, using default values","WARN")
 		utils.writeJson(configPath, {CobaltDBport=CobaltDBport})
 	end
 
@@ -98,7 +98,7 @@ local function openDatabase(d)
 
 	if not d.targetid then -- no target specified, check for local first
 		CElog("no targetid specified")
-		if utils.exists(string.format("%s%s/%s.json", dbroot, d.id, d.dbname)) then -- local db exists
+		if FS.Exists(string.format("%s%s/%s.json", dbroot, d.id, d.dbname)) then -- local db exists
 			d.targetid = d.id
 			CElog("local db exists")
 		else
@@ -113,30 +113,30 @@ local function openDatabase(d)
 	local jsonPath = dirPath .. d.dbname .. ".json"
 	loadedDatabases[d.targetid] = loadedDatabases[d.targetid] or {}
 
-	if utils.exists(dirPath) then -- server folder exists
-		if utils.exists(jsonPath) then
-			local parsed, error = utils.readJson(jsonPath)
+	if FS.Exists(dirPath) then -- server folder exists
+		local parsed, error = utils.readJson(jsonPath)
 
-			if error then
-				CElog("Could not read file, moving and creating a new one", "WARN")
-				utils.copyFile(jsonPath, dirPath .. d.dbname .. ".borked")
-				utils.writeJson(jsonPath, nil)
-				loadedDatabases[d.targetid][d.dbname] = {}
+		if error then
+			if error == "File does not exist" then
+				CElog(d.targetid .. " db doesnt exist, creating it", "CobaltDB", d.event)
 				databaseLoaderResponse.isNew = true
 
+				local success, error = utils.writeJson(jsonPath, nil)
+
+				if not success then
+					CElog('failed to write file "' .. tostring(jsonPath) .. '", error: ' .. tostring(error),"WARN")
+				end
+				loadedDatabases[d.targetid][d.dbname] = {}
 			else
-				CElog("opened "..d.targetid.." db "..d.dbname, "CobaltDB", d.event)
-				loadedDatabases[d.targetid][d.dbname] = parsed
+				CElog('failed to open file "' .. tostring(jsonPath) .. '", error: ' .. tostring(error),"WARN")
+				databaseLoaderResponse.isNew = true
 			end
 		else
-			CElog(d.targetid .. " db doesnt exist, creating it", "CobaltDB", d.event)
-			utils.writeJson(jsonPath, nil)
-			loadedDatabases[d.targetid][d.dbname] = {}
-			databaseLoaderResponse.isNew = true
+			CElog("opened "..d.targetid.." db "..d.dbname, "CobaltDB", d.event)
+			loadedDatabases[d.targetid][d.dbname] = parsed
 		end
 	else -- server folder doesnt exist, create it
-		CElog("server folder doesnt exist, creating it", "CobaltDB", d.event)
-		utils.createDirectory(dirPath)
+		CElog("client folder doesnt exist, creating it", "CobaltDB", d.event)
 		utils.writeJson(jsonPath, nil)
 		loadedDatabases[d.targetid][d.dbname] = {}
 		databaseLoaderResponse.isNew = true
@@ -147,7 +147,6 @@ end
 
 --saves the db to disk
 local function updateDatabase(d)
-
 	if not d.targetid then
 		CElog("no targetid was specified! defaulting to local", "CobaltDB", d.event)
 		d.targetid = d.id
@@ -158,8 +157,8 @@ local function updateDatabase(d)
 
 	local dataToWrite = loadedDatabases[d.targetid][d.dbname]
 
-	if utils.exists(dirPath) then -- server folder exists
-		if utils.exists(jsonPath) then
+	if FS.Exists(dirPath) then -- server folder exists
+		if FS.Exists(jsonPath) then
 			local parsed, error = utils.writeJson(jsonPath, dataToWrite)
 
 			if error then
@@ -173,7 +172,6 @@ local function updateDatabase(d)
 		end
 	else -- server folder doesnt exist, create it
 		CElog("server folder doesnt exist, creating it", "updateDatabase")
-		utils.createDirectory(dirPath)
 		utils.writeJson(jsonPath, dataToWrite)
 	end
 
