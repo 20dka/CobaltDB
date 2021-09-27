@@ -93,7 +93,7 @@ function onInit()
 end
 ----------------------------------------------------------MUTATORS---------------------------------------------------------
 
-local function openDatabase(d)
+local function openDatabase(d, dontSend)
 	local databaseLoaderResponse = { isNew = false } -- defines if the DB was created just now or if it was pre-existing.
 
 	if not d.targetid then -- no target specified, check for local first
@@ -142,7 +142,7 @@ local function openDatabase(d)
 		databaseLoaderResponse.isNew = true
 	end
 
-	connector:sendto(json.stringify(databaseLoaderResponse), d.ip, d.port)
+	if not dontSend then connector:sendto(json.stringify(databaseLoaderResponse), d.ip, d.port) end
 end
 
 --saves the db to disk
@@ -208,7 +208,9 @@ local function set(d)
 		end
 
 	else --db(file) DOESN'T EXIST
-		error("CobaltDB File " .. d.dbname .. " not loaded on " .. d.targetid)
+		CElog("CobaltDB File " .. d.dbname .. " not loaded on " .. d.targetid, "WARN")
+		openDatabase(d, true)
+		set(d)
 	end
 
 end
@@ -231,6 +233,9 @@ local function query(d)
 	if loadedDatabases[d.targetid][d.dbname] == nil then
 		--error here, database isn't open
 		data = cobaltSysChar .. "E:" .. d.dbname .. "not found."
+		openDatabase(d, true)
+		query(d)
+		return
 	else
 		if loadedDatabases[d.targetid][d.dbname][d.table] == nil then
 			--error here, table doesn't exist
@@ -261,6 +266,9 @@ local function getTable(d)
 	if loadedDatabases[d.targetid][d.dbname] == nil then
 		--error here, database isn't open
 		data = cobaltSysChar .. "E:" .. d.dbname .. "not found."
+		openDatabase(d, true)
+		getTable(d)
+		return
 	else
 		if loadedDatabases[d.targetid][d.dbname][d.table] == nil then
 			--error here, table doesn't exist
@@ -281,6 +289,13 @@ local function getTables(d)
 		d.targetid = d.id
 	end
 
+	if loadedDatabases[d.targetid][d.dbname] == nil then
+		--error here, database isn't open
+		openDatabase(d, true)
+		getTables(d)
+		return
+	end
+
 	local data = {}
 	for id, _ in pairs(loadedDatabases[d.targetid][d.dbname]) do
 		data[id] = id
@@ -295,6 +310,13 @@ local function getKeys(d)
 	if not d.targetid then
 		CElog("no targetid was specified! defaulting to local", "CobaltDB", d.event)
 		d.targetid = d.id
+	end
+
+	if loadedDatabases[d.targetid][d.dbname] == nil then
+		--error here, database isn't open
+		openDatabase(d, true)
+		getKeys(d)
+		return
 	end
 
 	local data = {}
@@ -313,9 +335,17 @@ local function tableExists(d)
 		d.targetid = d.id
 	end
 
-	local data = "E: database not open"
+	local data = "E: table doesnt exist"
 
-	if loadedDatabases[d.targetid][d.dbname] ~= nil and loadedDatabases[d.targetid][d.dbname][d.table] ~= nil then
+	if loadedDatabases[d.targetid][d.dbname] == nil then
+		--error here, database isn't open
+		openDatabase(d, true)
+		tableExists(d)
+		return
+	end
+
+
+	if loadedDatabases[d.targetid][d.dbname][d.table] ~= nil then
 		data = d.table
 	end
 
