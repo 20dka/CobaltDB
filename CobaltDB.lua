@@ -215,6 +215,40 @@ local function set(d)
 
 end
 
+--changes the table
+local function setKeys(d)
+	if not d.targetid then
+		CElog("no targetid was specified! defaulting to local", "CobaltDB", d.event)
+		d.targetid = d.id
+	end
+
+	if loadedDatabases[d.targetid][d.dbname] ~= nil then
+
+		if loadedDatabases[d.targetid][d.dbname][d.table] == nil then
+			loadedDatabases[d.targetid][d.dbname][d.table] = {}
+		end
+
+		if d.key ~= nil then
+			if loadedDatabases[d.targetid][d.dbname][d.table][d.key] == nil then
+				loadedDatabases[d.targetid][d.dbname][d.table][d.key] = d.values
+				updateDatabase(d)
+			else
+				if type(loadedDatabases[d.targetid][d.dbname][d.table][d.key]) ~= "table" then
+					
+				else
+					for k,v in pairs(d.values) do
+						loadedDatabases[d.targetid][d.dbname][d.table][d.key][k] = v
+					end
+					updateDatabase(d)
+				end
+			end
+		end
+
+	else --db(file) DOESN'T EXIST
+		error("CobaltDB File " .. d.dbname .. " not loaded on " .. d.targetid)
+	end
+
+end
 
 
 
@@ -247,6 +281,45 @@ local function query(d)
 			else
 				--send the value as json
 				data = json.stringify(loadedDatabases[d.targetid][d.dbname][d.table][d.key])
+			end
+		end
+	end
+
+	connector:sendto(data, d.ip, d.port)
+end
+
+--returns values for specific keys of the table
+local function queryKeys(d)
+	if not d.targetid then
+		CElog("no targetid was specified! defaulting to 'shared'", "CobaltDB", d.event)
+		d.targetid = "shared"
+	end
+
+	local data
+
+	if loadedDatabases[d.targetid][d.dbname] == nil then
+		--error here, database isn't open
+		data = cobaltSysChar .. "E:" .. d.dbname .. "not found."
+	else
+		if loadedDatabases[d.targetid][d.dbname][d.table] == nil then
+			--error here, table doesn't exist
+			data = cobaltSysChar .. "E:" .. d.dbname .. " > " .. d.table .. " not found."
+		else
+			if loadedDatabases[d.targetid][d.dbname][d.table][d.key] == nil then
+				--error here, key doesn't exist in table
+				data = cobaltSysChar .. "E:" .. d.dbname .. " > " .. d.table .. " > " .. d.key .. " not found."
+			else
+				if type(loadedDatabases[d.targetid][d.dbname][d.table][d.key]) ~= "table" then
+					--error here, key isn't a in table
+					data = cobaltSysChar .. "E:" .. d.dbname .. " > " .. d.table .. " > " .. d.key .. " is not a table."
+				else
+					local respTable = {}
+					for k,v in pairs(d.keys) do
+						respTable[v] = loadedDatabases[d.targetid][d.dbname][d.table][d.key][v]
+					end
+					--send the value as json
+					data = json.stringify(respTable)
+				end
 			end
 		end
 	end
@@ -366,6 +439,7 @@ local actionTable = {
 	["openDatabase"]   = function(d) openDatabase(d) end,
 	["closeDatabase"]  = function(d) closeDatabase(d) end,
 	["query"]          = function(d) query(d) end,
+	["querykeys"]      = function(d) queryKeys(d) end,
 	["set"]            = function(d) set(d) end,
 	["getTable"]       = function(d) getTable(d) end,
 	["getTables"]      = function(d) getTables(d) end,

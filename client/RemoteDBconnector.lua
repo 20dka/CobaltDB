@@ -5,8 +5,6 @@
 --   POST: Postcondition
 --RETURNS: What the method returns
 
---TODO: CHANGE THE FORMAT TO DATABASES > TABLES > KEYS > VALUES
-
 
 ------------------------------------------------------------INIT-----------------------------------------------------------
 local M = {}
@@ -16,7 +14,7 @@ pluginPath = pluginPath or (resources .. "/Server/" .. pluginName) -- for public
 local dbPath = pluginPath .. "/CobaltDB/"
 local cobaltSysChar = string.char(0x99, 0x99, 0x99, 0x99)
 
-TriggerLocalEvent("initDB", package.path, package.cpath, dbPath, json.stringify(config))
+--TriggerLocalEvent("initDB", package.path, package.cpath, dbPath, json.stringify(config))
 
 local port = 10814 -- port the cobaltDB server can be found on
 local serverID = "server1" -- id of this server, should be unique
@@ -121,7 +119,9 @@ tableTemplate.protectedKeys =
 	CobaltDB_databaseName = true,
 	CobaltDB_tableName = true,
 	CobaltDB_targetID = true,
-	exists = true
+	exists = true,
+	setKeys = true,
+	queryKeys = true
 }
 --Setup metatable for the sub-table
 --THIS IS THE SUBTABLE
@@ -197,6 +197,12 @@ local function newTable(DB, tableName)
 		exists = function(table)
 			return M.tableExists(table.CobaltDB_databaseName, table.CobaltDB_tableName, table.CobaltDB_targetID)
 		end
+		setKeys = function(table, key, values)
+			return M.setKeys(table.CobaltDB_databaseName, table.CobaltDB_tableName, key, values, table.CobaltDB_targetID)
+		end
+		queryKeys = function(table, key, keys)
+			return M.queryKeys(table.CobaltDB_databaseName, table.CobaltDB_tableName, key, keys, table.CobaltDB_targetID)
+		end
 	}
 	setmetatable(newTable, tableTemplate.metatable)
 
@@ -222,11 +228,13 @@ local function set(DBname, tableName, key, value, targetID)
 	server:send(json.stringify({event = "set", id=serverID, dbname = DBname, table = tableName, key = key, value = value, targetid=targetID}))
 end
 
-local function setPort(port)
-	server:close()
-	server:setsockname('0.0.0.0', port)
-	TriggerLocalEvent("setCobaltDBport",port)
-	return tonumber(server:receive()) == port
+--changes the a value in the table in
+local function setKeys(DBname, tableName, key, values, targetID)
+	targetID = targetID or serverID --default to local DBs
+
+	--value = json.stringify(value)
+
+	server:send(json.stringify({event = "set", id=serverID, dbname = DBname, table = tableName, key = key, values = values, targetid=targetID}))
 end
 
 ---------------------------------------------------------ACCESSORS---------------------------------------------------------
@@ -245,6 +253,33 @@ local function query(DBname, tableName, key, targetID)
 		else
 			if data:sub(1,1) == "E" then
 				error = data
+				data = nil
+			else
+				data = json.parse(data)
+			end
+		end
+	end
+
+	return data, error
+end
+
+--returns a specific value from the table
+local function queryKeys(DBname, tableName, key, keys, targetID)
+	targetID = targetID or serverID --default to local DBs
+
+	server:send(json.stringify({event = "query", id=serverID, dbname = DBname, table = tableName, key = key, keys = keys, targetid=targetID}))
+
+	local data, error = server:receive()
+
+	if type(data) == "string" then
+		if data:sub(1,4) == cobaltSysChar then
+			error = data:sub(5)
+			data = nil
+			CElog("[QueryKeys] CobaltDB replied with: "..error, "WARN")
+		else
+			if data:sub(1,1) == "E" then
+				error = data
+				CElog("[QueryKeys] CobaltDB replied with: "..error, "WARN")
 				data = nil
 			else
 				data = json.parse(data)
@@ -314,10 +349,7 @@ local function tableExists(DBname, tableName, targetID)
 
 	server:send(json.stringify({event = "tableExists", id=serverID, dbname = DBname, table = tableName, targetid=targetID}))
 
-
-	exists = server:receive() == tableName
-
-	return exists
+	return (server:receive() == tableName)
 end
 
 
@@ -331,9 +363,11 @@ M.newTable = newTable
 
 ----MUTATORS-----
 M.set = set
+M.setKeys = setKeys
 
 ----ACCESSORS----
 M.query = query
+M.queryKeys = queryKeys
 M.getTable = getTable
 M.getTables = getTables
 M.getKeys = getKeys
@@ -341,6 +375,5 @@ M.tableExists = tableExists
 
 ----FUNCTIONS----
 M.openDatabase = newDatabase
-M.setPort = function(...) end
 
 return M
