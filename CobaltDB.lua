@@ -10,10 +10,16 @@ local cobaltSysChar = string.char(0x99, 0x99, 0x99, 0x99)
 local CobaltDBport = 10814
 
 
--- loading
-pluginPath = "Resources/Server/CobaltDB"
+-- get plugin path
+pluginPath = debug.getinfo(1).source:gsub("\\","/")
+pluginPath = pluginPath:sub(1,(pluginPath:find("CobaltDB.lua"))-2)
 print("Plugin path is: " .. pluginPath)
 
+dbroot = pluginPath .. "/root/"
+print("DB root is: " .. dbroot)
+
+
+-- load modules
 utils = require("CobaltUtils")
 print("\n\n")
 CElog(color(107,94) .. "-------------Loading CobaltDB-------------")
@@ -21,38 +27,31 @@ CElog(color(107,94) .. "-------------Loading CobaltDB-------------")
 json = require("json")
 CElog("json Lib Loaded")
 
-dbroot = pluginPath .. "/root/"
-print("DB root is: " .. dbroot)
 
 CElog("-------------CobaltDB Loaded-------------")
--- loading
-
-
-
-
-
---RegisterEvent("initDB","initDB")
+-- load modules
 
 
 
 
 
 -- uptime
-local age = 0 --age of the server in milliseconds
-local lastAnnounce = 0
-local announceStep = 300000
+local announceTick = 0
+local announceStep = 300000 -- 5 minutes in ms
 
---CreateThread("onTick", 250)
+MP.CreateEventTimer("uptimeAnnounce", announceStep)
+MP.RegisterEvent("uptimeAnnounce","uptimeAnnounce")
+function uptimeAnnounce()
+	announceTick = announceTick + 1
 
-CElog("CobaltDB Initiated")
-
-
+	CElog("DB Uptime: " .. (announceTick * announceStep)/60000 .. " Minutes")
+end
 --uptime
 
 
 
 
-
+CElog("CobaltDB Initiated")
 
 
 
@@ -89,12 +88,8 @@ function onInit()
 
 	CElog("CobaltDB Ready on port "..tostring(CobaltDBport),"CobaltDB")
 
-	while true do
-		checkforincoming()
-	end
-
-
-	--CreateThread("checkforincoming", 100)
+	MP.CreateEventTimer("checkforincoming", 50)
+	MP.RegisterEvent("checkforincoming","checkforincoming")
 end
 ----------------------------------------------------------MUTATORS---------------------------------------------------------
 
