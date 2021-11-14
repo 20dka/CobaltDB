@@ -244,7 +244,7 @@ local function query(DBname, tableName, key, targetID)
 
 	server:send(json.stringify({event = "query", id=serverID, dbname = DBname, table = tableName, key = key, targetid=targetID}))
 
-	local data, error = server:receive()
+	local data, error = server:receive(32768)
 
 	if type(data) == "string" then
 		if data:sub(1,4) == cobaltSysChar then
@@ -269,7 +269,7 @@ local function queryKeys(DBname, tableName, key, keys, targetID)
 
 	server:send(json.stringify({event = "query", id=serverID, dbname = DBname, table = tableName, key = key, keys = keys, targetid=targetID}))
 
-	local data, error = server:receive()
+	local data, error = server:receive(32768)
 
 	if type(data) == "string" then
 		if data:sub(1,4) == cobaltSysChar then
@@ -314,7 +314,7 @@ local function getTables(DBname, targetID)
 
 	server:send(json.stringify({event = "getTables", id=serverID, dbname = DBname, targetid=targetID}))
 
-	local data, error = server:receive()
+	local data, error = server:receive(32768)
 
 	if data:sub(1,4) == cobaltSysChar then
 		error = data:sub(5)
@@ -332,7 +332,7 @@ local function getKeys(DBname, tableName, targetID)
 	server:send(json.stringify({event = "getKeys", id=serverID, dbname = DBname, table = tableName, targetid=targetID}))
 
 
-	local data, error = server:receive()
+	local data, error = server:receive(32768)
 
 	if data:sub(1,4) == cobaltSysChar then
 		error = data:sub(5)

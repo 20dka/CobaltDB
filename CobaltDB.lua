@@ -456,7 +456,7 @@ local function concatAll(tbl)
 end
 
 function checkforincoming()
-	local data, ip, port = connector:receivefrom()
+	local data, ip, port = connector:receivefrom(32768)
 	while data do
 		local parsed = json.parse(data)
 		parsed.ip = ip; parsed.port = port -- add return address
@@ -467,7 +467,7 @@ function checkforincoming()
 
 		actionTable[parsed.event](parsed) -- process request and reply
 
-		data, ip, port = connector:receivefrom() -- check for new requests
+		data, ip, port = connector:receivefrom(32768) -- check for new requests
 	end
 end
 
