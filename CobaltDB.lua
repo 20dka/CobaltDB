@@ -192,7 +192,7 @@ local function set(d)
 		d.targetid = d.id
 	end
 
-	if loadedDatabases[d.targetid][d.dbname] ~= nil then
+	if loadedDatabases[d.targetid] ~= nil and loadedDatabases[d.targetid][d.dbname] ~= nil then
 
 		if loadedDatabases[d.targetid][d.dbname][d.table] == nil then
 			loadedDatabases[d.targetid][d.dbname][d.table] = {}
@@ -222,7 +222,7 @@ local function setKeys(d)
 		d.targetid = d.id
 	end
 
-	if loadedDatabases[d.targetid][d.dbname] ~= nil then
+	if loadedDatabases[d.targetid] ~= nil and loadedDatabases[d.targetid][d.dbname] ~= nil then
 
 		if loadedDatabases[d.targetid][d.dbname][d.table] == nil then
 			loadedDatabases[d.targetid][d.dbname][d.table] = {}
@@ -264,7 +264,7 @@ local function query(d)
 
 	local data
 
-	if loadedDatabases[d.targetid][d.dbname] == nil then
+	if loadedDatabases[d.targetid] == nil or loadedDatabases[d.targetid][d.dbname] == nil then
 		--error here, database isn't open
 		data = cobaltSysChar .. "E:" .. d.dbname .. "not found."
 		openDatabase(d, true)
@@ -297,7 +297,7 @@ local function queryKeys(d)
 
 	local data
 
-	if loadedDatabases[d.targetid][d.dbname] == nil then
+	if loadedDatabases[d.targetid] == nil or loadedDatabases[d.targetid][d.dbname] == nil then
 		--error here, database isn't open
 		data = cobaltSysChar .. "E:" .. d.dbname .. "not found."
 	else
@@ -336,7 +336,7 @@ local function getTable(d)
 
 	local data
 
-	if loadedDatabases[d.targetid][d.dbname] == nil then
+	if loadedDatabases[d.targetid] == nil or loadedDatabases[d.targetid][d.dbname] == nil then
 		--error here, database isn't open
 		data = cobaltSysChar .. "E:" .. d.dbname .. "not found."
 		openDatabase(d, true)
@@ -362,7 +362,7 @@ local function getTables(d)
 		d.targetid = d.id
 	end
 
-	if loadedDatabases[d.targetid][d.dbname] == nil then
+	if loadedDatabases[d.targetid] == nil or loadedDatabases[d.targetid][d.dbname] == nil then
 		--error here, database isn't open
 		openDatabase(d, true)
 		getTables(d)
@@ -385,7 +385,7 @@ local function getKeys(d)
 		d.targetid = d.id
 	end
 
-	if loadedDatabases[d.targetid][d.dbname] == nil then
+	if loadedDatabases[d.targetid] == nil or loadedDatabases[d.targetid][d.dbname] == nil then
 		--error here, database isn't open
 		openDatabase(d, true)
 		getKeys(d)
@@ -410,7 +410,7 @@ local function tableExists(d)
 
 	local data = "E: table doesnt exist"
 
-	if loadedDatabases[d.targetid][d.dbname] == nil then
+	if loadedDatabases[d.targetid] == nil or loadedDatabases[d.targetid][d.dbname] == nil then
 		--error here, database isn't open
 		openDatabase(d, true)
 		tableExists(d)
