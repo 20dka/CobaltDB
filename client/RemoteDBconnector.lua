@@ -29,9 +29,8 @@ local function init(configPort, hostname)
 
 		local configPath = pluginPath .. "/dbConfig.json"
 
-		if utils.exists(configPath) then
-			local configcontents = utils.readJson(configPath)
-
+		local configcontents, err = utils.readJson(configPath)
+		if not err then
 			if not configcontents.ServerID then
 				CElog("No DB serverID specified in the config, defaulting to '"..serverID.."'","WARN")
 			else
@@ -50,7 +49,7 @@ local function init(configPort, hostname)
 				CElog("Remote CobaltDB Connector 'forceTarget' set to "..tostring(forceTarget), 'CobaltDB')
 			end
 		else
-			CElog('No Remote CobaltDB config found, using default values', "WARN")
+			CElog('No Remote CobaltDB config found, using default values ('..tostring(err)..')', "WARN")
 			utils.writeJson(configPath, {ServerID=serverID, remoteDBport=port, forceTarget=forceTarget})
 		end
 	end
@@ -196,10 +195,10 @@ local function newTable(DB, tableName)
 		CobaltDB_tableName = tableName,
 		exists = function(table)
 			return M.tableExists(table.CobaltDB_databaseName, table.CobaltDB_tableName, table.CobaltDB_targetID)
-		end
+		end,
 		setKeys = function(table, key, values)
 			return M.setKeys(table.CobaltDB_databaseName, table.CobaltDB_tableName, key, values, table.CobaltDB_targetID)
-		end
+		end,
 		queryKeys = function(table, key, keys)
 			return M.queryKeys(table.CobaltDB_databaseName, table.CobaltDB_tableName, key, keys, table.CobaltDB_targetID)
 		end
