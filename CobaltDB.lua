@@ -62,11 +62,7 @@ CElog("CobaltDB Initiated")
 
 --give the CobaltDBconnector all the information it needs without having to re-calculate it all
 function onInit()
-
-	--json = require("json")
 	socket = require("socket")
-	--utils = require("CobaltUtils")
-	--_G.dbroot = dbroot
 
 	local configPath = dbroot .. "dbConfig.json"
 
@@ -84,11 +80,11 @@ function onInit()
 
 	connector = socket.udp()
 	connector:setsockname('*', CobaltDBport) -- was 0.0.0.0
-	connector:settimeout(1)
+	connector:settimeout(0.05) -- make sure this is lower than the thread update rate below (in s)
 
 	CElog("CobaltDB Ready on port "..tostring(CobaltDBport),"CobaltDB")
 
-	MP.CreateEventTimer("checkforincoming", 50)
+	MP.CreateEventTimer("checkforincoming", 100) -- (in ms)
 	MP.RegisterEvent("checkforincoming","checkforincoming")
 end
 ----------------------------------------------------------MUTATORS---------------------------------------------------------

@@ -46,7 +46,7 @@ function CElog(string, heading, funcname, host)
 
 
 	out = out .. color(0)
-	MP.PrintRaw(out)
+	printRaw(out)
 	return out
 end
 
@@ -178,3 +178,4 @@ M.writeJson = writeJson
 
 
 return M
+
